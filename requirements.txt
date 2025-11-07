@@ -1,0 +1,41 @@
+# ============================================
+# ETL Workshop 3 - Requirements
+# Happiness Prediction System with Kafka
+# ============================================
+
+# Data Processing
+pandas==2.1.4
+numpy==1.26.2
+
+# Machine Learning
+scikit-learn==1.3.2
+joblib==1.3.2
+
+# Kafka Streaming
+kafka-python==2.0.2
+
+# Database
+mysql-connector-python==8.2.0
+sqlalchemy==2.0.23
+
+# Web Dashboard
+dash==2.14.2
+dash-bootstrap-components==1.5.0
+
+# Visualization
+plotly==5.18.0
+matplotlib==3.8.2
+seaborn==0.13.0
+
+# Scientific Computing
+scipy==1.11.4
+
+# Jupyter Environment
+jupyter==1.0.0
+notebook==7.0.6
+ipykernel==6.27.1
+ipython==8.18.1
+
+# Additional Tools
+python-dotenv==1.0.0
+
