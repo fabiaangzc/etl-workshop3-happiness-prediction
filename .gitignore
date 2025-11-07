@@ -1,0 +1,104 @@
+# ============================================
+# ETL Workshop 3 - .gitignore
+# ============================================
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Virtual Environment
+.venv/
+venv/
+ENV/
+env/
+.virtualenv/
+
+# Jupyter Notebooks
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+*.log
+logs/
+*.log.*
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Environment Variables
+.env
+.env.local
+.env.*.local
+
+# Model Files (optional - descomenta si no quieres subir modelos grandes)
+# model/*.pkl
+# *.pkl
+
+# Data Files (opcional - descomenta si los datos son muy grandes)
+# data/*.csv
+# data/clean/*.csv
+
+# Dashboard Cache
+dashboard/__pycache__/
+
+# Kafka Temp Files
+kafka/__pycache__/
+
+# OS
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# Jupyter
+.ipynb_checkpoints
+*/.ipynb_checkpoints/*
+
+# MyPy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pytest
+.pytest_cache/
+
+# Docker (si quieres ignorar archivos de Docker)
+# docker-compose.override.yml
+# .dockerignore
+
+# Backup files
+*.bak
+*.backup
+*.old
+*.orig
+
+# Temporary files
+*.tmp
+*.temp
+~$*
+
+# Reports and outputs
+*.html
+*.pdf
+reports/
+
+.dll
