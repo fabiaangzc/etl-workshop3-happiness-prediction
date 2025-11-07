@@ -1,32 +1,35 @@
 # Happiness Prediction with Kafka Streaming, Linear Regression & Dash
 
-Predicting World Happiness scores from 2015–2019 with a **Multiple Linear Regression** model, streamed through **Apache Kafka** into **MySQL**, and visualized in an interactive **Dash (Plotly)** dashboard.
-
-> **Tech stack:** Python, scikit-learn, Kafka (producer/consumer), MySQL, SQLAlchemy, Plotly/Dash, Pandas, NumPy.
-
----
-
-## 1) Project Overview
-
-This repository implements an end-to-end mini data platform:
-
-1. **ETL & Streaming**
-   The **producer** loads the raw CSVs (2015–2019), cleans and standardizes fields, assigns regions, and **streams each record to Kafka** (`happiness-data`).
-   The **consumer** reads those messages, **loads the trained regression model**, makes a prediction per record, and **stores results in MySQL** (table `predictions`).
-
-2. **Model**
-   A Multiple Linear Regression trained on six explanatory variables:
-   `GDP_per_Capita`, `Social_Support`, `Healthy_Life_Expectancy`, `Freedom`, `Generosity`, `Perceptions_of_Corruption`.
-
-3. **Dashboard**
-   A Dash app reads the `predictions` table and provides KPIs (R², MAE, RMSE), train/test comparisons, error distributions, top-errors, regional performance, a country choropleth (MAE), and temporal evolution charts.
+![Python](https://img.shields.io/badge/Python-3.10%2B-blue)
+![Kafka](https://img.shields.io/badge/Apache_Kafka-3.7.0-orange)
+![MySQL](https://img.shields.io/badge/MySQL-8.0%2B-blue)
+![Dash](https://img.shields.io/badge/Dash-Plotly-informational)
+![ML](https://img.shields.io/badge/ML-Scikit--Learn-yellow)
 
 ---
 
-## 2) Repository Structure
+## Objective
+
+Build a **real-time ETL and Machine Learning system** that streams data through **Apache Kafka**, performs **Multiple Linear Regression** predictions of *Happiness Score*, stores the results in **MySQL**, and visualizes key performance indicators (KPIs) through an interactive **Dash dashboard**.
+
+---
+
+## System Architecture
+
+```mermaid
+flowchart LR
+    A[CSV files 2015–2019] --> B[Producer.py\nExtract + Transform + Split flag]
+    B --> C[(Kafka topic: happiness-data)]
+    C --> D[Consumer.py\nLoad .pkl → Predict → Insert]
+    D --> E[(MySQL database: happiness_db / predictions)]
+    E --> F[Dash App\nKPIs + Maps + Trends]
+```
+
+---
+
+## Repository Structure
 
 ```
-.
 ├─ data/
 │  ├─ clean/
 │  │  ├─ 2015.csv … 2019.csv
@@ -51,239 +54,202 @@ This repository implements an end-to-end mini data platform:
 
 ---
 
-## 3) Data
+## Project Description
 
-**Source:** World Happiness Report (2015–2019).
-Files are normalized so that column names align across years (e.g., *Economy (GDP per Capita)* → `GDP_per_Capita`; *Health (Life Expectancy)* → `Healthy_Life_Expectancy`; etc.). Country aliases are reconciled (e.g., *Hong Kong S.A.R.* → *Hong Kong*).
+This repository implements a **complete data pipeline** that integrates **ETL, streaming, model inference, and visualization** for the *World Happiness Report (2015–2019)* dataset.
 
----
-
-## 4) End-to-End Architecture
-
-```
-CSV (2015–2019)
-      │
-      ▼
-[ producer.py ]  — cleanse, standardize, fix regions, add train/test flags
-      │
-      ├── Kafka topic: happiness-data
-      ▼
-[ consumer.py ] — load regression model (.pkl) → predict → write to MySQL
-      │
-      ▼
-           MySQL (database: happiness_db)
-           └─ predictions (actual, predicted, error, split, region, etc.)
-                                   │
-                                   ▼
-                       [ Dash app ] happiness_dashboard.py
-```
-
-**Kafka Topic:** `happiness-data`
-**DB:** `happiness_db` (MySQL) with table `predictions`.
-**Model path:** `model/happiness_regression.pkl`.
+* The **Kafka Producer** extracts and cleans data, maps regions, standardizes columns, and flags each record as *train* or *test* before sending it to the topic `happiness-data`.
+* The **Kafka Consumer** receives each record, loads the serialized regression model (`.pkl`), performs predictions, and inserts the results into **MySQL** (`happiness_db.predictions`).
+* The **Dash Dashboard** connects to MySQL and displays KPIs, error distributions, scatter comparisons, temporal evolution, regional and geospatial analyses.
 
 ---
 
-## 5) Features & Model
+## Model & Features
+
+**Model:** Multiple Linear Regression (scikit-learn)
 
 **Target:** `Happiness_Score`
-**Features:**
+**Input Features:**
 
-* `GDP_per_Capita`
-* `Social_Support`
-* `Healthy_Life_Expectancy`
-* `Freedom`
-* `Generosity`
-* `Perceptions_of_Corruption`
+1. GDP per Capita
+2. Social Support
+3. Healthy Life Expectancy
+4. Freedom
+5. Generosity
+6. Perceptions of Corruption
 
-**Split:** 70% train / 30% test (seed = 42), aligned between the notebook and the streaming pipeline.
+**Split:** 70 % training, 30 % testing (seed = 42)
 
-**Metrics reported in the dashboard:**
+**Metrics Evaluated:**
 
-* **R²** (Coefficient of Determination)
-* **MAE** (Mean Absolute Error)
-* **RMSE** (Root Mean Squared Error)
-
----
-
-## 6) Database Schema (Predictions)
-
-Table: `predictions` (MySQL)
-
-| Column                      | Type          | Notes                     |
-| --------------------------- | ------------- | ------------------------- |
-| id                          | INT (PK, AI)  |                           |
-| country, region             | VARCHAR       | From the streaming record |
-| year                        | INT           | 2015–2019                 |
-| gdp_per_capita … corruption | DECIMAL(10,3) | Input features            |
-| actual_happiness_score      | DECIMAL(10,3) | Ground truth (if present) |
-| predicted_happiness_score   | DECIMAL(10,3) | Model output              |
-| prediction_error            | DECIMAL(10,3) | `abs(actual - predicted)` |
-| data_split                  | VARCHAR(10)   | `train` or `test`         |
-| created_at                  | TIMESTAMP     | Insertion timestamp       |
+* R² (Coefficient of Determination)
+* MAE (Mean Absolute Error)
+* RMSE (Root Mean Squared Error)
 
 ---
 
-## 7) Dashboard Overview (Dash/Plotly)
+## Why not RandomForest?
 
-**Filters:** dataset (All/Train/Test), region, year.
-**KPIs:** Overall R², MAE, RMSE + train/test breakdown.
-**Charts:**
+Although **RandomForestRegressor** achieved slightly higher raw accuracy, it was not selected because:
 
-* *Predicted vs Actual* (with y=x reference line)
-* *Prediction Error Distribution* (histogram; MAE reference line)
-* *Train vs Test Comparison* (bar chart: MAE/RMSE)
-* *Top-10 Largest Errors* (horizontal bar)
-* *Performance by Region* (dual bars: MAE and R²)
-* *Performance Map by Country* (choropleth by MAE)
-* *Temporal Evolution* (MAE by year; actual vs predicted averages)
+* The course emphasizes **interpretability** and understanding regression assumptions.
+* Linear Regression offers **transparent coefficients** for each feature.
+* It has **instant training and inference** — ideal for real-time streaming.
+* RandomForest adds complexity, latency, and less explainability.
 
-> The app reads directly from the `predictions` table and updates visuals according to filters.
+Thus, the chosen approach favors **clarity and generalization** over marginal accuracy gains.
 
 ---
 
-## 8) Setup & Execution
+## Key Technical Decisions
 
-### 8.1 Prerequisites
-
-* Python 3.10+
-* MySQL 8+ (running locally)
-* Kafka 3.x (local broker)
-* (Optional) Node/WSL/Docker depending on your environment
-
-### 8.2 Installation
-
-```bash
-python -m venv .venv
-source .venv/bin/activate        # (Windows: .venv\Scripts\activate)
-pip install -r requirements.txt
-```
-
-### 8.3 MySQL
-
-Create a local user or reuse the defaults. The project expects:
-
-```
-host=localhost, port=3306, user=root, password=root, database=happiness_db
-```
-
-> You can override these via environment variables for the **dashboard**:
-
-```
-DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME
-```
-
-### 8.4 Start Kafka
-
-* Start your local Kafka broker (ensure it listens on `localhost:9092`).
-* Create the topic `happiness-data` if your setup doesn’t auto-create topics.
-
-### 8.5 Run the pipeline
-
-**1) Train (optional if `.pkl` exists):**
-Use `notebooks/5_train_model.ipynb` to train and export `model/happiness_regression.pkl`.
-
-**2) Producer (ETL → Kafka):**
-
-```bash
-python kafka/producer.py
-```
-
-**3) Consumer (Kafka → Predict → MySQL):**
-
-```bash
-python kafka/consumer.py
-```
-
-**4) Dashboard:**
-
-```bash
-python dashboard/happiness_dashboard.py
-# open http://127.0.0.1:8050
-```
+* **Streaming with Kafka:** enables asynchronous data flow between ETL (producer) and prediction (consumer).
+* **MySQL as persistent layer:** relational, queryable, and easily visualized.
+* **Model serialization (`.pkl`):** guarantees identical behavior between training and production.
+* **Standardization with `StandardScaler`:** ensures features are on comparable scales.
+* **Train/Test consistency:** same random state used across the notebook and streaming components.
 
 ---
 
-## 9) Results & Screenshots
+## Database Schema
 
-> Add your screenshots to a `docs/` folder and reference them here.
+| Column                                                                                                              | Description               |
+| ------------------------------------------------------------------------------------------------------------------- | ------------------------- |
+| `country`, `region`                                                                                                 | Country and region name   |
+| `year`                                                                                                              | Year (2015–2019)          |
+| `gdp_per_capita`, `social_support`, `healthy_life_expectancy`, `freedom`, `generosity`, `perceptions_of_corruption` | Input features            |
+| `actual_happiness_score`                                                                                            | Real value (from dataset) |
+| `predicted_happiness_score`                                                                                         | Model output              |
+| `prediction_error`                                                                                                  | `abs(actual − predicted)` |
+| `data_split`                                                                                                        | `train` or `test`         |
+| `created_at`                                                                                                        | Timestamp of insertion    |
+
+---
+
+## Dashboard Highlights
+
+The **Dash application** connects directly to MySQL and updates interactively with filters for dataset, region, and year.
 
 **KPIs:**
+
+* Global R², MAE, RMSE
+* Train vs Test record counts and metrics
+
+**Visuals:**
+
+* **Predicted vs Actual Scatter** with diagonal reference line
+* **Error Distribution Histogram** with MAE vertical line
+* **Train vs Test Comparison Bars** (MAE & RMSE)
+* **Top-10 Largest Errors**
+* **Performance by Region:** MAE + R² per region
+* **World Map (Choropleth):** average MAE per country
+* **Temporal Evolution:** yearly MAE and average Happiness Scores
+
+📸 *Sample Screenshots:*
 ![KPIs](docs/kpis.png)
-
-**Predicted vs Actual:**
 ![Scatter](docs/scatter.png)
-
-**Error Distribution:**
 ![Histogram](docs/histogram.png)
-
-**Train vs Test & Top-10 Errors:**
 ![Compare+Top](docs/compare_top.png)
-
-**Performance by Region:**
 ![Region](docs/region.png)
-
-**Performance Map (MAE by Country):**
 ![Map](docs/map.png)
-
-**Temporal Evolution:**
 ![Temporal](docs/temporal.png)
 
 ---
 
-## 10) Interpreting the Model
+## Model Interpretation (Short Summary)
 
-* **Global fit:** R² shows how much of the real variability is reproduced by the model (closer to 1 is better).
-* **Error magnitude:** MAE is your average absolute error (in the 0–10 happiness scale); RMSE penalizes larger errors more strongly.
-* **Generalization:** Train vs Test bars should be of similar magnitude; large gaps may indicate overfitting.
-* **Regional heterogeneity:** Regions with higher MAE (and low R²) suggest non-linear patterns or missing drivers not captured by a linear model.
-* **Country map:** Quickly highlights where predictions are consistently harder.
+* Global performance: **R² ≈ 0.76**, **MAE ≈ 0.43** on a 0–10 scale.
+* Train/Test metrics are balanced → model generalizes well.
+* **Western Europe** and **Oceania** show the best fit (low MAE, high R²).
+* **Sub-Saharan Africa** and **Latin America** show higher errors → non-linear or missing drivers.
+* Temporal trends indicate stable predictions over the 2015–2019 period.
 
 ---
 
-## 11) Configuration
-
-Environment variables for the dashboard (fallbacks shown):
+## Quickstart
 
 ```bash
-export DB_HOST=localhost
-export DB_PORT=3306
-export DB_USER=root
-export DB_PASSWORD=root
-export DB_NAME=happiness_db
+# 1) Create and activate virtual environment
+python -m venv .venv
+source .venv/bin/activate       # (Windows: .venv\Scripts\activate)
+
+# 2) Install dependencies
+pip install -r requirements.txt
+
+# 3) Start Kafka (Docker optional)
+docker-compose up -d            # starts Kafka + ZooKeeper
+
+# 4) Run consumer (first) and producer
+python kafka/consumer.py
+python kafka/producer.py
+
+# 5) Launch the dashboard
+python dashboard/happiness_dashboard.py
+# → http://127.0.0.1:8050
 ```
 
-If you change Kafka or DB credentials, update them in the corresponding scripts.
+---
+
+## Environment Variables
+
+```bash
+# MySQL connection
+DB_HOST=localhost
+DB_PORT=3306
+DB_USER=root
+DB_PASSWORD=root
+DB_NAME=happiness_db
+```
+
+Kafka broker defaults to `localhost:9092`, topic name `happiness-data`.
 
 ---
 
-## 12) Troubleshooting
+## Troubleshooting
 
-* **Kafka connection refused:** Check broker is up and reachable at `localhost:9092`.
-* **Topic not found:** Create `happiness-data` or enable auto-creation.
-* **MySQL auth errors:** Verify user/password/host and that the server is running.
-* **No data in dashboard:** Ensure `consumer.py` has inserted rows into `predictions` and the DB params in the dashboard match your local setup.
-* **Unicode/country names on map:** The choropleth uses `locationmode="country names"`. Country aliases were reconciled; add an alias if a country doesn’t color properly.
-
----
-
-## 13) Reproducibility Notes
-
-* Train/test split uses a fixed random seed so the split is consistent across notebook and streaming pipeline.
-* Numerical fields are rounded to three decimals during cleaning to harmonize across years.
-* Missing values for `Perceptions_of_Corruption` are imputed by *(region, year)* mean when possible.
+| Problem                              | Likely Cause / Fix                                                              |
+| ------------------------------------ | ------------------------------------------------------------------------------- |
+| **Kafka connection refused**         | Ensure broker is running at `localhost:9092` and topic `happiness-data` exists. |
+| **No data in dashboard**             | Confirm `consumer.py` inserted rows into `predictions`.                         |
+| **MySQL authentication error**       | Verify DB credentials or running service.                                       |
+| **World map missing some countries** | Adjust name normalization to match Plotly’s country list.                       |
+| **Unicode error on console**         | Run scripts with UTF-8 encoding (`PYTHONUTF8=1`).                               |
 
 ---
 
-## 14) Acknowledgments
+## Results Summary
 
-* World Happiness Report (2015–2019).
-* Plotly/Dash for interactive visualization.
-* Apache Kafka & MySQL for the streaming and storage layers.
+|   Metric | Train | Test |
+| -------: | ----: | ---: |
+|   **R²** |  0.78 | 0.75 |
+|  **MAE** |  0.42 | 0.45 |
+| **RMSE** |  0.54 | 0.56 |
+
+*(values approximate, from the dashboard and model notebook)*
 
 ---
 
-### License
+## Key Takeaways
 
-This repository is for academic purposes (course ETL Workshop). If you plan to use parts of it elsewhere, adapt credentials and data licenses accordingly.
+* Linear Regression performs reliably across multiple years of the World Happiness dataset.
+* The model generalizes well, with consistent test metrics and no overfitting.
+* Regional variability reveals the influence of unobserved cultural or political factors.
+* Real-time streaming integration ensures scalability and reusability for future predictive pipelines.
 
+---
+
+## References
+
+* [World Happiness Report](https://worldhappiness.report/)
+* [Apache Kafka Documentation](https://kafka.apache.org/documentation/)
+* [MySQL Documentation](https://dev.mysql.com/doc/)
+* [Scikit-Learn](https://scikit-learn.org/stable/)
+* [Plotly & Dash](https://plotly.com/dash/)
+
+---
+
+## Author
+
+**Fabián Gomezcasseres**
+Data Engineering & AI – ETL Workshop 3
+Universidad Autónoma de Occidente – 2025
